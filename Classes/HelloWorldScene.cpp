@@ -34,6 +34,9 @@ bool HelloWorld::init()
     // 2. add a menu item with "X" image, which is clicked to quit the program
     //    you may modify it.
 
+	string str = MyUtility::getUTF8Char("lblMusic");
+	log("%s", str.c_str());
+
     // add a "close" icon to exit the progress. it's an autorelease object
     auto closeItem = MenuItemImage::create(
                                            "CloseNormal.png",
@@ -54,7 +57,7 @@ bool HelloWorld::init()
     // add a label shows "Hello World"
     // create and initialize a label
     
-    auto label = Label::createWithTTF("Hello World", "fonts/Marker Felt.ttf", 24);
+	auto label = Label::createWithTTF(str, "fonts/STLITI.ttf", 24);
     
     // position the label on the center of the screen
     label->setPosition(Vec2(origin.x + visibleSize.width/2,
