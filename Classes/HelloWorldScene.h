@@ -15,9 +15,21 @@ public:
     
     // a selector callback
     void menuCloseCallback(cocos2d::Ref* pSender);
+
+	virtual void onExit();
     
     // implement the "static create()" method manually
     CREATE_FUNC(HelloWorld);
+
+private:
+	cocos2d::Sprite *loadSprite;
+	int m_nNumberOfLoaded;
+	std::thread *m_loadAudioThread;
+
+	void Loading();
+	void LoadingTextureCallBack(Texture2D *texture);
+	void LoadingAudio();
+	void delayCall(float dt);
 };
 
 #endif // __HELLOWORLD_SCENE_H__

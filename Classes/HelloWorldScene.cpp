@@ -1,6 +1,10 @@
 #include "HelloWorldScene.h"
+#include "BaseLayer.h"
+#include "SystemHeader.h"
 
 USING_NS_CC;
+using namespace std;
+using namespace CocosDenshion;
 
 Scene* HelloWorld::createScene()
 {
@@ -30,51 +34,29 @@ bool HelloWorld::init()
     Size visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
-    /////////////////////////////
-    // 2. add a menu item with "X" image, which is clicked to quit the program
-    //    you may modify it.
+	auto bg = TMXTiledMap::create("map/red_bg.tmx");
+	addChild(bg);
 
-	string str = MyUtility::getUTF8Char("lblMusic");
-	log("%s", str.c_str());
+	SpriteFrameCache::getInstance()->addSpriteFramesWithFile("texture/loading_texture.plist");
 
-    // add a "close" icon to exit the progress. it's an autorelease object
-    auto closeItem = MenuItemImage::create(
-                                           "CloseNormal.png",
-                                           "CloseSelected.png",
-                                           CC_CALLBACK_1(HelloWorld::menuCloseCallback, this));
-    
-	closeItem->setPosition(Vec2(origin.x + visibleSize.width - closeItem->getContentSize().width/2 ,
-                                origin.y + closeItem->getContentSize().height/2));
+	auto logo = Sprite::createWithSpriteFrameName("logo.png");
+	logo->setPosition(Vec2(visibleSize.width / 2, visibleSize.height / 2));
+	addChild(logo);
 
-    // create menu, it's an autorelease object
-    auto menu = Menu::create(closeItem, NULL);
-    menu->setPosition(Vec2::ZERO);
-    this->addChild(menu, 1);
+	loadSprite = Sprite::createWithSpriteFrameName("loding4.png");
+	loadSprite->setPosition(logo->getPosition() - Vec2(0, logo->getContentSize().height / 2 + 30));
+	addChild(loadSprite);
+	Loading();
 
-    /////////////////////////////
-    // 3. add your codes below...
+	m_nNumberOfLoaded = 0;
+	Director::getInstance()->getTextureCache()->addImageAsync("texture/home_texture.png", 
+		CC_CALLBACK_1(HelloWorld::LoadingTextureCallBack, this));
+	Director::getInstance()->getTextureCache()->addImageAsync("texture/setting_texture.png", 
+		CC_CALLBACK_1(HelloWorld::LoadingTextureCallBack, this));
+	Director::getInstance()->getTextureCache()->addImageAsync("texture/gameplay_texture.png", 
+		CC_CALLBACK_1(HelloWorld::LoadingTextureCallBack, this));
 
-    // add a label shows "Hello World"
-    // create and initialize a label
-    
-	auto label = Label::createWithTTF(str, "fonts/STLITI.ttf", 24);
-    
-    // position the label on the center of the screen
-    label->setPosition(Vec2(origin.x + visibleSize.width/2,
-                            origin.y + visibleSize.height - label->getContentSize().height));
-
-    // add the label as a child to this layer
-    this->addChild(label, 1);
-
-    // add "HelloWorld" splash screen"
-    auto sprite = Sprite::create("HelloWorld.png");
-
-    // position the sprite on the center of the screen
-    sprite->setPosition(Vec2(visibleSize.width/2 + origin.x, visibleSize.height/2 + origin.y));
-
-    // add the sprite as a child to this layer
-    this->addChild(sprite, 0);
-    
+	m_loadAudioThread = new thread(&HelloWorld::LoadingAudio, this);
     return true;
 }
 
@@ -91,4 +73,66 @@ void HelloWorld::menuCloseCallback(Ref* pSender)
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_IOS)
     exit(0);
 #endif
+}
+
+void HelloWorld::onExit()
+{
+	Layer::onExit();
+	m_loadAudioThread->join();
+	CC_SAFE_DELETE(m_loadAudioThread);
+
+	SpriteFrameCache::getInstance()->removeSpriteFramesFromFile("texture/loading_texture.plist");
+	Director::getInstance()->getTextureCache()->removeTextureForKey("texture/loading_texture.png");
+	unschedule(schedule_selector(HelloWorld::delayCall));
+}
+
+void HelloWorld::Loading()
+{
+	Animation *animation = Animation::create();
+	for (int i=1; i <= 4; i++)
+	{
+		__String *frameName = __String::createWithFormat("loding%d.png", i);
+		log("frameName = %s", frameName->getCString());
+		SpriteFrame *spriteFrame = SpriteFrameCache::getInstance()->getSpriteFrameByName(frameName->getCString());
+		animation->addSpriteFrame(spriteFrame);
+	}
+
+	animation->setDelayPerUnit(0.5f);
+	animation->setRestoreOriginalFrame(true);
+
+	Animate *action = Animate::create(animation);
+	loadSprite->runAction(RepeatForever::create(action));
+}
+
+void HelloWorld::LoadingTextureCallBack(Texture2D *texture)
+{
+	switch (m_nNumberOfLoaded++)
+	{
+	case 0:
+		SpriteFrameCache::getInstance()->addSpriteFramesWithFile("texture/home_texture.plist", texture);
+		log("home texture ok");
+		break;
+	case 1:
+		SpriteFrameCache::getInstance()->addSpriteFramesWithFile("texture/setting_texture.plist", texture);
+		log("home texture ok");
+		break;
+	case 2:
+		SpriteFrameCache::getInstance()->addSpriteFramesWithFile("texture/gameplay_texture.plist", texture);
+		log("home texture ok");
+		this->schedule(schedule_selector(HelloWorld::delayCall), 1, 1, 3);
+		break;
+	}
+}
+
+void HelloWorld::delayCall(float dt)
+{
+	auto sc = BaseLayer::createScene();
+	Director::getInstance()->replaceScene(sc);
+}
+
+void HelloWorld::LoadingAudio()
+{
+	log("Loading Audio");
+	SimpleAudioEngine::getInstance()->preloadBackgroundMusic(bg_music_1);
+	SimpleAudioEngine::getInstance()->preloadBackgroundMusic(bg_music_2);
 }

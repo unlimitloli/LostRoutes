@@ -23,14 +23,28 @@ void AppDelegate::initGLContextAttrs()
     GLView::setGLContextAttrs(glContextAttrs);
 }
 
-bool AppDelegate::applicationDidFinishLaunching() {
+bool AppDelegate::applicationDidFinishLaunching() 
+{
     // initialize director
     auto director = Director::getInstance();
     auto glview = director->getOpenGLView();
-    if(!glview) {
+    if(!glview) 
+	{
         glview = GLViewImpl::create("My Game");
+		glview->setFrameSize(320, 480);
         director->setOpenGLView(glview);
     }
+
+	auto designSize = Size(320, 480);
+	auto resourceSize = Size(640, 960);
+
+	vector<string> seachPaths;
+	seachPaths.push_back("hd");
+
+	FileUtils::getInstance()->setSearchPaths(seachPaths);
+
+	director->setContentScaleFactor(resourceSize.width / designSize.width);
+	glview->setDesignResolutionSize(designSize.width, designSize.height, ResolutionPolicy::FIXED_WIDTH);
 
     // turn on display FPS
     director->setDisplayStats(true);
@@ -39,7 +53,7 @@ bool AppDelegate::applicationDidFinishLaunching() {
     director->setAnimationInterval(1.0 / 60);
 
     // create a scene. it's an autorelease object
-	auto scene = BaseLayer::createScene();
+	auto scene = HelloWorld::createScene();
 
     // run
     director->runWithScene(scene);
@@ -48,7 +62,8 @@ bool AppDelegate::applicationDidFinishLaunching() {
 }
 
 // This function will be called when the app is inactive. When comes a phone call,it's be invoked too
-void AppDelegate::applicationDidEnterBackground() {
+void AppDelegate::applicationDidEnterBackground() 
+{
     Director::getInstance()->stopAnimation();
 
     // if you use SimpleAudioEngine, it must be pause
@@ -56,7 +71,8 @@ void AppDelegate::applicationDidEnterBackground() {
 }
 
 // this function will be called when the app is active again
-void AppDelegate::applicationWillEnterForeground() {
+void AppDelegate::applicationWillEnterForeground()
+{
     Director::getInstance()->startAnimation();
 
     // if you use SimpleAudioEngine, it must resume here
