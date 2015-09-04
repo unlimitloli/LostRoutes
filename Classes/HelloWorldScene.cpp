@@ -1,5 +1,5 @@
 #include "HelloWorldScene.h"
-#include "BaseLayer.h"
+#include "HomeMenu.h"
 #include "SystemHeader.h"
 
 USING_NS_CC;
@@ -114,11 +114,11 @@ void HelloWorld::LoadingTextureCallBack(Texture2D *texture)
 		break;
 	case 1:
 		SpriteFrameCache::getInstance()->addSpriteFramesWithFile("texture/setting_texture.plist", texture);
-		log("home texture ok");
+		log("setting texture ok");
 		break;
 	case 2:
 		SpriteFrameCache::getInstance()->addSpriteFramesWithFile("texture/gameplay_texture.plist", texture);
-		log("home texture ok");
+		log("gameplay texture ok");
 		this->schedule(schedule_selector(HelloWorld::delayCall), 1, 1, 3);
 		break;
 	}
@@ -126,7 +126,7 @@ void HelloWorld::LoadingTextureCallBack(Texture2D *texture)
 
 void HelloWorld::delayCall(float dt)
 {
-	auto sc = BaseLayer::createScene();
+	auto sc = HomeMenu::createScene();
 	Director::getInstance()->replaceScene(sc);
 }
 
@@ -135,4 +135,6 @@ void HelloWorld::LoadingAudio()
 	log("Loading Audio");
 	SimpleAudioEngine::getInstance()->preloadBackgroundMusic(bg_music_1);
 	SimpleAudioEngine::getInstance()->preloadBackgroundMusic(bg_music_2);
+	//SimpleAudioEngine::getInstance()->preloadEffect(sound_1);
+	//SimpleAudioEngine::getInstance()->preloadEffect(sound_2);
 }

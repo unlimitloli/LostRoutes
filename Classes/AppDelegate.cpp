@@ -1,8 +1,10 @@
 #include "AppDelegate.h"
 #include "HelloWorldScene.h"
 #include "BaseLayer.h"
+#include "SystemHeader.h"
 
 USING_NS_CC;
+using namespace CocosDenshion;
 
 AppDelegate::AppDelegate() {
 
@@ -57,6 +59,9 @@ bool AppDelegate::applicationDidFinishLaunching()
 
     // run
     director->runWithScene(scene);
+
+	SimpleAudioEngine::getInstance()->preloadEffect(sound_1);
+	SimpleAudioEngine::getInstance()->preloadEffect(sound_2);
 
     return true;
 }
