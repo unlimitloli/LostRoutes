@@ -10,6 +10,7 @@ using namespace CocosDenshion;
 #define TagEnemy		400
 #define TagFigter		500
 #define TagBullet		600
+#define TagMenu			999
 
 Scene *GameLayer::createScene()
 {
@@ -86,6 +87,13 @@ void GameLayer::onEnter()
 
 	Size visibleSize = Director::getInstance()->getVisibleSize();
 
+	auto pauseSprite = Sprite::createWithSpriteFrameName("gameplay.button.pause.png");
+	auto pauseMenuItem = MenuItemSprite::create(pauseSprite, pauseSprite,
+		CC_CALLBACK_1(GameLayer::menuPauseCallBack, this));
+	auto pauseMenu = Menu::create(pauseMenuItem, NULL);
+	pauseMenu->setPosition(Vec2(30, visibleSize.height - 28));
+	addChild(pauseMenu, 20, TagMenu);
+
 	auto stone1 = Enemy::createWithEnemyTypes(EnemyTypeStone);
 	stone1->setVelocity(Vec2(0, -100));
 	addChild(stone1, 10, TagEnemy);
@@ -126,6 +134,16 @@ void GameLayer::onEnter()
 
 }
 
+void GameLayer::onEnterTransitionDidFinish()
+{
+	Layer::onEnterTransitionDidFinish();
+	log("GameLayer onEntertransitionDidFinish");
+	if (UserDefault::getInstance()->getBoolForKey(MUSIC_KEY))
+	{
+		SimpleAudioEngine::getInstance()->playBackgroundMusic(bg_music_2, true);
+	}
+}
+
 void GameLayer::onExit()
 {
 	Layer::onExit();
@@ -138,4 +156,63 @@ void GameLayer::onExit()
 		if (node->getTag() != TagBackground)
 			removeChild(node);
 	}
+}
+
+void GameLayer::menuPauseCallBack(Ref *pSender)
+{
+	log("menu Pause Callback");
+	if (UserDefault::getInstance()->getBoolForKey(SOUND_KEY))
+	{
+		SimpleAudioEngine::getInstance()->playEffect(sound_1);
+	}
+
+	pause();
+
+	for (const auto &node : getChildren())
+		node->pause();
+
+	Size visibleSize = Director::getInstance()->getVisibleSize();
+
+	auto backNormal = Sprite::createWithSpriteFrameName("gameplay.button.back.png");
+	auto backSelected = Sprite::createWithSpriteFrameName("gameplay.button.back-on.png");
+	auto backMenuItem = MenuItemSprite::create(backNormal, backSelected, 
+		CC_CALLBACK_1(GameLayer::menuBackCallBack, this));
+
+	auto resumeNormal = Sprite::createWithSpriteFrameName("gameplay.button.resume.png");
+	auto resumeSeleted = Sprite::createWithSpriteFrameName("gameplay.button.resume-on.png");
+	auto resumeMenuItem = MenuItemSprite::create(resumeNormal, resumeSeleted, 
+		CC_CALLBACK_1(GameLayer::menuResumeCallBack, this));
+
+	menu = Menu::create(backMenuItem, resumeMenuItem, NULL);
+	menu->alignItemsVertically();
+	menu->setPosition(Vec2(visibleSize.width / 2, visibleSize.height / 2));
+
+	addChild(menu, 2, TagMenu);
+}
+
+void GameLayer::menuBackCallBack(Ref *pSender)
+{
+	log("menuBackCallBack");
+	if (UserDefault::getInstance()->getBoolForKey(SOUND_KEY))
+	{
+		SimpleAudioEngine::getInstance()->playEffect(sound_1);
+	}
+
+	Director::getInstance()->popScene();
+}
+
+void GameLayer::menuResumeCallBack(Ref *pSender)
+{
+	log("menuResumeCallBack");
+	if (UserDefault::getInstance()->getBoolForKey(SOUND_KEY))
+	{
+		SimpleAudioEngine::getInstance()->playEffect(sound_1);
+	}
+
+	resume();
+
+	for (const auto &node : getChildren())
+		node->resume();
+
+	removeChild(menu);
 }
