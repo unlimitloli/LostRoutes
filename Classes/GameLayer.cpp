@@ -3,6 +3,7 @@
 #include "SystemHeader.h"
 #include "Fighter.h"
 #include "Bullet.h"
+#include "GameOverLayer.h"
 
 USING_NS_CC;
 using namespace CocosDenshion;
@@ -204,7 +205,7 @@ void GameLayer::onExit()
 {
 	Layer::onExit();
 
-	//unschedule();
+	unschedule(schedule_selector(GameLayer::shootButtle));
 
 	auto nodes = getChildren();
 	for (const auto &node : nodes)
@@ -355,6 +356,12 @@ void GameLayer::fighterHitEnemy(Enemy *enemy)
 	if (fighter->getHitPoints() <= 0)
 	{
 		log("GameOver");
+		auto gameOverLayer = GameOverLayer::createWinScore(score);
+		auto gameOverScene = Scene::create();
+		gameOverScene->addChild(gameOverLayer);
+
+		auto tsc = TransitionFade::create(1.0f, gameOverScene);
+		Director::getInstance()->pushScene(tsc);
 	}
 	else
 	{
