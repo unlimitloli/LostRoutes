@@ -3,7 +3,7 @@
 
 USING_NS_CC;
 
-Bullet *Bullet::createWithSpriteFrmaeName(const char *spriteFrameName)
+Bullet *Bullet::createWithSpriteFrameName(const char *spriteFrameName)
 {
 	Bullet *bullet = new Bullet();
 
@@ -12,7 +12,7 @@ Bullet *Bullet::createWithSpriteFrmaeName(const char *spriteFrameName)
 		bullet->autorelease();
 		bullet->setVisible(false);
 
-		auto body = PhysicsBody::create();
+		auto body = PhysicsBody::createBox(bullet->getContentSize());
 
 		body->setCategoryBitmask(0x01);
 		body->setCollisionBitmask(0x02);

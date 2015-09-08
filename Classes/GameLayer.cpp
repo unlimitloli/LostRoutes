@@ -2,6 +2,7 @@
 #include "Enemy.h"
 #include "SystemHeader.h"
 #include "Fighter.h"
+#include "Bullet.h"
 
 USING_NS_CC;
 using namespace CocosDenshion;
@@ -10,13 +11,19 @@ using namespace CocosDenshion;
 #define TagEnemy		400
 #define TagFigter		500
 #define TagBullet		600
+#define TagExplosion    700
+#define TagStatusBar	800		
+#define TagStatusLife	900	
+#define TagStatusScore	1000
+
 #define TagMenu			999
+#define BulletVeloctity 300
 
 Scene *GameLayer::createScene()
 {
 	auto scene = Scene::createWithPhysics();
 	scene->getPhysicsWorld()->setGravity(Vec2(0, 0));
-	scene->getPhysicsWorld()->setDebugDrawMask(PhysicsWorld::DEBUGDRAW_ALL);
+	//scene->getPhysicsWorld()->setDebugDrawMask(PhysicsWorld::DEBUGDRAW_ALL);
 	auto layer = GameLayer::create();
 	scene->addChild(layer);
 	return scene;
@@ -29,24 +36,10 @@ bool GameLayer::init()
 		return false;
 	}
 
+	score = 0;
+	scorePlaceholder = 0;
+
 	initBG();
-
-	//auto bg = TMXTiledMap::create("map/red_bg.tmx");
-	//addChild(bg);
-
-	//auto enemy1 = Enemy::createWithEnemyTypes(EnemyTypes::EnemyTypeEnemy1);
-	//enemy1->setVelocity(Vec2(0, -60));
-	////enemy1->setPosition(100, 200);
-	//addChild(enemy1);
-
-	//auto enemy2 = Enemy::createWithEnemyTypes(EnemyTypes::EnemyTypeEnemy2);
-	//enemy2->setVelocity(Vec2(0, -30));
-	////enemy2->setPosition(200, 200);
-	//addChild(enemy2);
-
-	//auto fighter = Fighter::createWithSpriteFrameName("gameplay.fighter.png");
-	//fighter->setPosition(Vec2(0, 100));
-	//addChild(fighter);
 
 	return true;
 }
@@ -115,12 +108,23 @@ void GameLayer::onEnter()
 	fighter->setPosition(Vec2(visibleSize.width / 2, 70));
 	addChild(fighter, 10, TagFigter);
 
+	updateStatusBarFighter();
+	updateStatusBarScore();
+
 	touchFighter = EventListenerTouchOneByOne::create();
 	touchFighter->setSwallowTouches(true);
 
 	touchFighter->onTouchBegan = [](Touch *touch, Event *event)
 	{
-		return true;
+		auto target = event->getCurrentTarget();
+		Vec2 localPt = target->convertToNodeSpace(touch->getLocation());
+		Size s = target->getContentSize();
+		Rect rect = Rect(0, 0, s.width, s.height);
+
+		if (rect.containsPoint(localPt))
+			return true;
+
+		return false;
 	};
 
 	touchFighter->onTouchMoved = [](Touch *touch, Event *event)
@@ -131,6 +135,58 @@ void GameLayer::onEnter()
 
 	EventDispatcher *eventDispatcher = Director::getInstance()->getEventDispatcher();
 	eventDispatcher->addEventListenerWithSceneGraphPriority(touchFighter, fighter);
+
+	schedule(schedule_selector(GameLayer::shootButtle), 0.2f);	//发射子弹
+
+	//物理碰撞检测
+	auto contactListener = EventListenerPhysicsContact::create();
+	contactListener->onContactBegin = [this](PhysicsContact &contact)
+	{
+		auto spriteA = contact.getShapeA()->getBody()->getNode();
+		auto spriteB = contact.getShapeB()->getBody()->getNode();
+
+		Node *enemy1 = nullptr;
+
+		if ((spriteA->getTag() == TagFigter) && (spriteB->getTag() == TagEnemy))
+		{
+			enemy1 = spriteB;
+		}
+		if ((spriteA->getTag() == TagEnemy) && (spriteB->getTag() == TagFigter))
+		{
+			enemy1 = spriteA;
+		}
+		if (enemy1 != nullptr)
+		{
+			fighterHitEnemy((Enemy *)enemy1);
+			return false;
+		}
+
+		Node *enemy2 = nullptr;
+
+		if ((spriteA->getTag() == TagBullet) && (spriteB->getTag() == TagEnemy))
+		{
+			if (!spriteA->isVisible())
+				return false;
+			spriteA->setVisible(false);
+			enemy2 = spriteB;
+		}
+		if ((spriteA->getTag() == TagEnemy) && (spriteB->getTag() == TagBullet))
+		{
+			if (!spriteB->isVisible())
+				return false;
+			spriteB->setVisible(false);
+			enemy2 = spriteA;
+		}
+		if (enemy2 != nullptr)
+		{
+			bulleHitEnemy((Enemy *)enemy2);
+			return false;
+		}
+
+		return false;
+	};
+
+	Director::getInstance()->getEventDispatcher()->addEventListenerWithFixedPriority(contactListener, 1);
 
 }
 
@@ -215,4 +271,139 @@ void GameLayer::menuResumeCallBack(Ref *pSender)
 		node->resume();
 
 	removeChild(menu);
+}
+
+void GameLayer::shootButtle(float dt)
+{
+	if (fighter && fighter->isVisible())
+	{
+		Bullet *bullet = Bullet::createWithSpriteFrameName("gameplay.bullet.png");
+		bullet->setVelocity(Vec2(0, BulletVeloctity));
+		addChild(bullet, 0, TagBullet);
+		bullet->shootBulletFromFighter(fighter);
+	}
+}
+
+void GameLayer::bulleHitEnemy(Enemy *enemy)
+{
+	enemy->setHitPoints(enemy->getHitPoints() - 1);
+
+	if (enemy->getHitPoints() <= 0)
+	{
+		Node *node = getChildByTag(TagExplosion);
+		if (node)
+			removeChild(node);
+
+		ParticleSystem *explosion = ParticleSystemQuad::create("particle/explosion.plist");
+		explosion->setPosition(enemy->getPosition());
+		addChild(explosion, 2, TagExplosion);
+		if (UserDefault::getInstance()->getBoolForKey(SOUND_KEY))
+			SimpleAudioEngine::getInstance()->playEffect(sound_2);
+
+		switch (enemy->getEnemyType())
+		{
+		case EnemyTypeStone:
+			score += EnemyStone_Score;
+			scorePlaceholder += EnemyStone_Score;
+			break;
+		case EnemyTypeEnemy1:
+			score += Enemy1_Score;
+			scorePlaceholder += Enemy1_Score;
+			break;
+		case EnemyTypeEnemy2:
+			score += Enemy2_Score;
+			scorePlaceholder += Enemy2_Score;
+			break;
+		case EnemyTypePlanet:
+			score += EnemyPlanet_Score;
+			scorePlaceholder += EnemyPlanet_Score;
+			break;
+		}
+
+		if (scorePlaceholder >= 1000)
+		{
+			fighter->setHitPoints(fighter->getHitPoints() + 1);
+			updateStatusBarFighter();
+			scorePlaceholder -= 1000;
+		}
+
+		updateStatusBarScore();
+		enemy->setVisible(false);
+		enemy->spawn();
+	}
+}
+
+void GameLayer::fighterHitEnemy(Enemy *enemy)
+{
+	Size visibleSize = Director::getInstance()->getVisibleSize();
+
+	Node *node = getChildByTag(TagExplosion);
+	if (node)
+		removeChild(node);
+
+	ParticleSystem *explosion = ParticleSystemQuad::create("particle/explosion.plist");
+	explosion->setPosition(fighter->getPosition());
+	addChild(explosion, 2, TagExplosion);
+	if (UserDefault::getInstance()->getBoolForKey(SOUND_KEY))
+		SimpleAudioEngine::getInstance()->playEffect(sound_2);
+
+	enemy->setVisible(false);
+	enemy->spawn();
+
+	fighter->setHitPoints(fighter->getHitPoints() - 1);
+	updateStatusBarFighter();
+	if (fighter->getHitPoints() <= 0)
+	{
+		log("GameOver");
+	}
+	else
+	{
+		fighter->setPosition(Vec2(visibleSize.width / 2, 70));
+		auto ac1 = Show::create();
+		auto ac2 = FadeIn::create(1.0f);
+		auto seq = Sequence::create(ac1, ac2, NULL);
+		fighter->runAction(seq);
+	}
+}
+
+void GameLayer::updateStatusBarFighter()
+{
+	Size visibleSize = Director::getInstance()->getVisibleSize();
+
+	Node *n1 = getChildByTag(TagStatusBar);
+	if (n1)
+		removeChild(n1);
+
+	Sprite *fg = Sprite::createWithSpriteFrameName("gameplay.life.png");
+	fg->setPosition(Vec2(visibleSize.width - 60, visibleSize.height - 28));
+	addChild(fg, 20, TagStatusBar);
+
+	Node *n2 = getChildByTag(TagStatusLife);
+	if (n2)
+		removeChild(n2);
+
+	if (fighter->getHitPoints() <= 0)
+		fighter->setHitPoints(0);
+
+	__String *life = __String::createWithFormat("x %d ", fighter->getHitPoints());
+	auto lbLife = Label::createWithTTF(life->getCString(), "fonts/hanyi.ttf", 18);
+	lbLife->setPosition(fg->getPosition() + Vec2(30, 0));
+	addChild(lbLife, 20, TagStatusLife);
+}
+
+void GameLayer::updateStatusBarScore()
+{
+	Size visibleSize = Director::getInstance()->getVisibleSize();
+
+	Node *n = getChildByTag(TagStatusScore);
+	if (n)
+		removeChild(n);
+
+	if (score <= 0)
+		score = 0;
+
+	__String *statusScore = __String::createWithFormat("%d ", score);
+	auto lbScore = Label::createWithTTF(statusScore->getCString(), "fonts/hanyi.ttf", 18);
+	lbScore->setPosition(Vec2(visibleSize.width / 2, visibleSize.height - 28));
+	addChild(lbScore, 20, TagStatusScore);
 }

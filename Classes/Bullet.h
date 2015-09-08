@@ -12,7 +12,7 @@ public:
 	void shootBulletFromFighter(Fighter *fighter);
 
 	virtual void update(float dt);
-	static Bullet *createWithSpriteFrmaeName(const char *spriteFrameName);
+	static Bullet *createWithSpriteFrameName(const char *spriteFrameName);
 };
 
 #endif
